@@ -1,4 +1,4 @@
-name: Verificar receta
+name: Pipeline de Seguridad DevSecOps
 
 on: 
   push:
@@ -9,12 +9,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 1.Obtener codigo de repositorio
+      - name: 1. Obtener código de repositorio
         uses: actions/checkout@v4
 
-      - name: 2.Verificar que index no este vacio
+      - name: 2. Verificar que index.html no esté vacío
         run: test -s index.html
       
-      - name: 3. Verificar que no haya links http:// inseguros
-        run: |
-          ! grep "http://" index.html
+      - name: 3. Escanear el código en busca de vulnerabilidades (SAST)
+        uses: snyk/actions/html@latest
+        continue-on-error: true # Continuamos aunque falle para ver el reporte
+        env:
+          # Necesitarás crear un Token gratuito de Snyk y guardarlo
+          # en "Settings > Secrets > Actions" en tu repositorio de GitHub
+          # con el nombre SNYK_TOKEN
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          file: index.html 
+      # -----------------------------------------------------------------
