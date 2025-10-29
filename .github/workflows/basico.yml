@@ -16,7 +16,7 @@ jobs:
         run: test -s index.html
       
       - name: 3. Escanear el código en busca de vulnerabilidades (SAST)
-        uses: snyk/actions/html@latest
+        uses: snyk/actions/html@master
         continue-on-error: true # No fallamos el build, solo reportamos
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
