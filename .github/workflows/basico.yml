@@ -14,3 +14,7 @@ jobs:
 
       - name: 2.Verificar que index no este vacio
         run: test -s index.html
+      
+      - name: 3.Verificar que no hay links inseguros
+        run: 
+          !grep "http://" index.html
