@@ -1,0 +1,16 @@
+name: Verificar receta
+
+on: 
+  push:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1.Obtener codigo de repositorio
+        uses: actions/checkout@v4
+
+      - name: 2.Verificar que index no este vacio
+        run: test -s index.html
