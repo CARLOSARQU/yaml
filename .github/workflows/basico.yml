@@ -16,46 +16,37 @@ jobs:
         run: test -s index.html
       
       - name: 3. Escanear el código en busca de vulnerabilidades (SAST)
-        # Usamos la acción genérica del Snyk CLI
-        uses: snyk/actions/cli@master
+        uses: snyk/actions@master
         continue-on-error: true # No fallamos el build, solo reportamos
         env:
-          # El token que ya configuraste
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          # Le decimos a la acción qué comando de Snyk ejecutar
           command: code test
-          # Le decimos qué archivo escanear
-          args: index.html
+          args: --file=index.html
 
-  # Trabajo 2: Construir y escanear la imagen (¡Nuevo!)
+  # Trabajo 2: Construir y escanear la imagen Docker
   build-and-scan-image:
-    # Este trabajo depende de que el primero (test-source-code) termine bien
     needs: test-source-code 
     runs-on: ubuntu-latest
     steps:
       - name: 1. Obtener código de repositorio
         uses: actions/checkout@v4
 
-      # Necesitamos iniciar sesión en Docker para construir
       - name: 2. Configurar Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 3. Construimos la imagen usando nuestro Dockerfile
       - name: 3. Construir imagen de Docker
         uses: docker/build-push-action@v5
         with:
-          context: . # Usa el Dockerfile en el directorio actual
-          tags: mi-proyecto-web:latest # Le ponemos un nombre
-          load: true # Carga la imagen en el runner para escanearla
+          context: .
+          tags: mi-proyecto-web:latest
+          load: true
 
-      # 4. ¡Escaneamos la imagen construida!
       - name: 4. Escanear imagen de Docker con Snyk
-        uses: snyk/actions/docker@master
-        continue-on-error: true # Importante para ver el reporte sin fallar
+        uses: snyk/actions@master
+        continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          # Le decimos a Snyk qué imagen escanear
-          image: mi-proyecto-web:latest 
-          args: --file=Dockerfile # Le damos el Dockerfile para más contexto
+          command: container test
+          args: --file=Dockerfile mi-proyecto-web:latest
