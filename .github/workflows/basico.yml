@@ -15,6 +15,6 @@ jobs:
       - name: 2.Verificar que index no este vacio
         run: test -s index.html
       
-      - name: 3.Verificar que no hay links inseguros
+      - name: 3. Verificar que no haya links http:// inseguros
         run: |
-          !grep "http://" index.html
+          ! grep "http://" index.html
