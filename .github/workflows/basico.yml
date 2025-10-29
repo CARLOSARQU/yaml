@@ -16,12 +16,17 @@ jobs:
         run: test -s index.html
       
       - name: 3. Escanear el código en busca de vulnerabilidades (SAST)
-        uses: snyk/actions/html@master
+        # Usamos la acción genérica del Snyk CLI
+        uses: snyk/actions/cli@master
         continue-on-error: true # No fallamos el build, solo reportamos
         env:
+          # El token que ya configuraste
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          file: index.html
+          # Le decimos a la acción qué comando de Snyk ejecutar
+          command: code test
+          # Le decimos qué archivo escanear
+          args: index.html
 
   # Trabajo 2: Construir y escanear la imagen (¡Nuevo!)
   build-and-scan-image:
