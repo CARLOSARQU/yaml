@@ -17,4 +17,4 @@ jobs:
       
       - name: 3.Verificar que no hay links inseguros
         run: |
-          !grep "http://" index.html
+          !grep "https://" index.html
