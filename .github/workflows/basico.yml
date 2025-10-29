@@ -3,68 +3,87 @@ name: Pipeline de Seguridad DevSecOps
 on:
   push:
     branches: ["main"]
+  pull_request:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: 1. Obtener código de repositorio
+      - name: 1️⃣ Obtener código del repositorio
         uses: actions/checkout@v4
 
-      - name: 2. Verificar que index.html no esté vacío
+      - name: 2️⃣ Verificar que index.html no esté vacío
         run: test -s index.html
 
-      - name: 3. Instalar Snyk CLI
-        run: |
-          npm install -g snyk
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      - name: 3️⃣ Instalar Snyk CLI
+        run: npm install -g snyk
 
-      - name: 4. Ejecutar Snyk y guardar reporte JSON
+      - name: 4️⃣ Ejecutar análisis Snyk y guardar reporte
         id: snyk_test
         run: |
           snyk auth $SNYK_TOKEN
 
+          # Ejecutar escaneo (agrega --file= si tienes package.json u otro)
           snyk test --json > snyk-report.json || true
-          
-          # Imprimir un resumen legible a la salida del job
-          echo "===== RESUMEN SNYK ====="
-          echo "Vulnerabilities por severidad:"
-          jq -r '[.vulnerabilities[]?.severity] | group_by(.) | map({(.[0]): length}) | add // {}' snyk-report.json || echo "{}"
 
-          # Contar entradas críticas / altas
+          echo "===== RESUMEN SNYK ====="
+          echo "Vulnerabilidades por severidad:"
+          jq -r '[.vulnerabilities[]?.severity] | group_by(.) | map({(.[0]): length}) | add // {}' snyk-report.json
+
           critical_count=$(jq '[.vulnerabilities[]?.severity] | map(select(.=="critical")) | length' snyk-report.json)
           high_count=$(jq '[.vulnerabilities[]?.severity] | map(select(.=="high")) | length' snyk-report.json)
+
           echo "Critical: $critical_count"
           echo "High: $high_count"
 
-          # Imprimir lista resumida (title + package) para inspección rápida
-          echo ""
-          echo "Listado resumido (severity - title - package):"
-          jq -r '.vulnerabilities[]? | "\(.severity) - \(.title) - \(.packageName) \(.version // "")"' snyk-report.json || true
-          
-          # Guardamos el conteo como outputs para uso posterior (opcional)
           echo "::set-output name=critical::$critical_count"
           echo "::set-output name=high::$high_count"
+
+          echo ""
+          echo "Listado resumido:"
+          jq -r '.vulnerabilities[]? | "\(.severity | ascii_upcase) | \(.title) | \(.packageName // "N/A")"' snyk-report.json
+
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-      - name: 5. Subir reporte Snyk como artefacto (para descargarlo)
+      - name: 5️⃣ Subir reporte como artefacto
         uses: actions/upload-artifact@v4
         with:
           name: snyk-report
           path: snyk-report.json
 
-      - name: 6. Fallar pipeline si hay vulnerabilidades críticas o altas
-        if: always()   # ejecutar aun si el paso anterior "falle" o sea true
+      - name: 6️⃣ Fallar si hay vulnerabilidades críticas o muchas altas
+        if: always()
         run: |
           crit=${{ steps.snyk_test.outputs.critical }}
           high=${{ steps.snyk_test.outputs.high }}
-          echo "Decidiendo política: critical=$crit high=$high"
-          # politica de ejemplo: abortar si hay criticals o más de 5 highs
+          echo "Evaluando política: critical=$crit, high=$high"
           if [ "$crit" -gt 0 ] || [ "$high" -gt 5 ]; then
-            echo "❌ Existen vulnerabilidades de severidad alta/critica. Abortando pipeline."
+            echo "❌ Vulnerabilidades críticas detectadas. Abortando pipeline."
             exit 1
           else
-            echo "✅ Snyk bajo umbral aceptable. Pipeline continúa."
+            echo "✅ Sin vulnerabilidades críticas. Continuamos."
           fi
+
+      - name: 7️⃣ Comentar resultado en PR (si aplica)
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/github-script@v7
+        env:
+          CRIT: ${{ steps.snyk_test.outputs.critical }}
+          HIGH: ${{ steps.snyk_test.outputs.high }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const crit = process.env.CRIT;
+            const high = process.env.HIGH;
+            const body = `🧪 **Resultado Snyk**  
+            - Critical: ${crit}  
+            - High: ${high}  
+            (pipeline ejecutado automáticamente)`;
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });
