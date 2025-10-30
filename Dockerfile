@@ -3,8 +3,8 @@
 # 1. La "Base"
 # Empezamos desde una imagen base que ya tiene Nginx (servidor web).
 # Usamos 'alpine' porque es una versión muy pequeña y segura.
-FROM nginx:stable-alpine
 
+FROM nginx:1.29.3-alpine3.22-slim
 # 2. El Contenido
 # Copiamos nuestro código (el index.html con el formulario) 
 # dentro del contenedor, en la carpeta que Nginx usa para servir webs.
