@@ -16,13 +16,15 @@ jobs:
         run: test -s index.html
       
       - name: 3. Escanear el código en busca de vulnerabilidades (SAST)
-        uses: snyk/actions@master
+        # --- CORRECCIÓN AQUÍ ---
+        uses: snyk/actions/cli@master 
         continue-on-error: true # No fallamos el build, solo reportamos
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: code test
-          args: --file=index.html
+          # --- Y CORRECCIÓN AQUÍ ---
+          args: index.html # Se pasa el archivo directamente
 
   # Trabajo 2: Construir y escanear la imagen Docker
   build-and-scan-image:
@@ -43,10 +45,12 @@ jobs:
           load: true
 
       - name: 4. Escanear imagen de Docker con Snyk
-        uses: snyk/actions@master
+        # --- CORRECCIÓN AQUÍ ---
+        uses: snyk/actions/cli@master
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: container test
+          # Esto está correcto, 'container test' sí usa 'args' así
           args: --file=Dockerfile mi-proyecto-web:latest
